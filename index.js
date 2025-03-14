@@ -3,7 +3,7 @@ const app = express()
 
 let data = [
     { 
-      "id": "1",
+      "id": "1", 
       "name": "Arto Hellas", 
       "number": "040-123456"
     },
@@ -25,7 +25,7 @@ let data = [
 ]
 
 app.get('/api/persons', (request, response) => {
-    return response.json(data)
+  return response.json(data)
 })
 
 app.get('/info', (request, response) => {
@@ -34,8 +34,21 @@ app.get('/info', (request, response) => {
 
 app.get('/api/persons/:id', (request, response) => {
   const id = request.params.id
-  if (id > data.length) return response.status(404).send()
-  return response.json(data[id - 1])
+  const person = data.find(person => person.id === id)
+  if (!person) {
+    return response.status(404).send('Person not found')
+  }
+  return response.json(person)
+})
+
+app.delete('/api/persons/:id', (request, response) => {
+  const id = request.params.id
+  const index = data.findIndex(person => person.id === id)
+  if (index === -1) {
+    return response.status(404).send('Person not found')
+  }
+  data.splice(index, 1)
+  return response.json(data)
 })
 
 const PORT = 3001
