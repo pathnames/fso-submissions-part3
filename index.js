@@ -1,4 +1,5 @@
 const express = require('express')
+var morgan = require('morgan')
 const app = express()
 
 let data = [
@@ -23,6 +24,12 @@ let data = [
       "number": "39-23-6423122"
     }
 ]
+
+// Custom token to log request body
+morgan.token('body', (req) => JSON.stringify(req.body))
+
+// Custom Morgan format to match your desired output
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 app.use(express.json())
 
