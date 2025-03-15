@@ -1,7 +1,8 @@
 const express = require('express')
 var morgan = require('morgan')
+const cors = require('cors')
 const app = express()
-
+app.use(cors())
 let data = [
     { 
       "id": 1, 
