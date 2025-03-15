@@ -34,6 +34,9 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms :b
 
 app.use(express.json())
 
+app.get('/', (request, response) => {
+  return response.send('Hello Render!')
+})
 app.get('/api/persons', (request, response) => {
   return response.json(data)
 })
