@@ -14,101 +14,69 @@ morgan.token('body', (req) => JSON.stringify(req.body))
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
 // Get all persons
-app.get('/api/persons', (request, response) => {
+app.get('/api/persons', (req, res, next) => {
   Phonebook.find({})
-    .then(phonebook => response.json(phonebook))
-    .catch(error => {
-      console.error(`Error fetching phonebook: ${error.message}`)
-      response.status(500).json({ error: 'Internal server error' })
-    })
+    .then(phonebook => res.json(phonebook))
+    .catch(error => next(error))
 })
 
 // Info page
-app.get('/info', (request, response) => {
+app.get('/info', (req, res, next) => {
   Phonebook.countDocuments()
-    .then(count => {
-      response.send(`<div><p>Phonebook has info for ${count} people</p><p>${new Date()}</p></div>`)
-    })
-    .catch(error => {
-      console.error(`Error fetching count: ${error.message}`)
-      response.status(500).json({ error: 'Internal server error' })
-    })
+    .then(count => res.send(`<div><p>Phonebook has info for ${count} people</p><p>${new Date()}</p></div>`))
+    .catch(error => next(error))
 })
 
 // Get person by ID
-app.get('/api/persons/:id', (request, response) => {
-  Phonebook.findById(request.params.id)
+app.get('/api/persons/:id', (req, res, next) => {
+  Phonebook.findById(req.params.id)
     .then(person => {
-      if (!person) {
-        return response.status(404).json({ error: 'Person not found' })
-      }
-      response.json(person)
+      if (!person) return res.status(404).json({ error: 'Person not found' })
+      res.json(person)
     })
-    .catch(error => {
-      console.error(`Error fetching person: ${error.message}`)
-      response.status(400).json({ error: 'Invalid ID format' })
-    })
+    .catch(error => next(error))
 })
 
 // Delete person
-app.delete('/api/persons/:id', (request, response) => {
-  Phonebook.findByIdAndDelete(request.params.id)
+app.delete('/api/persons/:id', (req, res, next) => {
+  Phonebook.findByIdAndDelete(req.params.id)
     .then(result => {
-      if (!result) {
-        return response.status(404).json({ error: 'Person not found' })
-      }
-      response.status(200).json({ message: `Person with id ${request.params.id} deleted` })
+      if (!result) return res.status(404).json({ error: 'Person not found' })
+      res.status(200).json({ message: `Person with id ${req.params.id} deleted` })
     })
-    .catch(error => {
-      console.error(`Error deleting person: ${error.message}`)
-      response.status(400).json({ error: 'Invalid ID format' })
-    })
+    .catch(error => next(error))
 })
 
 // Add new person
-app.post('/api/persons', (request, response) => {
-  const { name, number } = request.body
-
-  if (!name || !number) {
-    return response.status(400).json({ error: 'Name and number are required' })
-  }
+app.post('/api/persons', (req, res, next) => {
+  const { name, number } = req.body
+  if (!name || !number) return res.status(400).json({ error: 'Name and number are required' })
 
   Phonebook.findOne({ name })
     .then(existingPerson => {
       if (existingPerson) {
-        return response.status(409).json({ error: 'Name must be unique' })
+        return res.status(409).json({ error: 'Name must be unique' })
       }
 
       const newPerson = new Phonebook({ name, number })
       return newPerson.save()
     })
-    .then(savedPerson => {
-      response.status(201).json(savedPerson)
-    })
-    .catch(error => {
-      console.error(`Error saving person: ${error.message}`)
-      response.status(500).json({ error: 'Internal server error' })
-    })
+    .then(savedPerson => res.status(201).json(savedPerson))
+    .catch(error => next(error))
 })
 
-const errorHandler = (error, request, response, next) => {
+// Error handling middleware
+const errorHandler = (error, req, res, next) => {
   console.error(error.message)
 
-  if (error.name === 'CastError') {
-      return response.status(400).json({ error: 'Malformatted ID' })
-  } else if (error.name === 'ValidationError') {
-      return response.status(400).json({ error: error.message })
-  } else if (error.name === 'MongoServerError' && error.code === 11000) {
-      return response.status(409).json({ error: 'Duplicate key error: Name must be unique' })
-  } else if (error.name === 'TypeError') {
-      return response.status(400).json({ error: 'Invalid data type' })
-  }
+  if (error.name === 'CastError') return res.status(400).json({ error: 'Malformatted ID' })
+  if (error.name === 'ValidationError') return res.status(400).json({ error: error.message })
+  if (error.name === 'MongoServerError' && error.code === 11000) return res.status(409).json({ error: 'Duplicate key error: Name must be unique' })
+  if (error.name === 'TypeError') return res.status(400).json({ error: 'Invalid data type' })
 
-  response.status(500).json({ error: 'Internal Server Error' })
+  res.status(500).json({ error: 'Internal Server Error' })
 }
 app.use(errorHandler)
 
 const PORT = 3001
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
