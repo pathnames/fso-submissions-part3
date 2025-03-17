@@ -91,6 +91,23 @@ app.post('/api/persons', (request, response) => {
     })
 })
 
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+
+  if (error.name === 'CastError') {
+      return response.status(400).json({ error: 'Malformatted ID' })
+  } else if (error.name === 'ValidationError') {
+      return response.status(400).json({ error: error.message })
+  } else if (error.name === 'MongoServerError' && error.code === 11000) {
+      return response.status(409).json({ error: 'Duplicate key error: Name must be unique' })
+  } else if (error.name === 'TypeError') {
+      return response.status(400).json({ error: 'Invalid data type' })
+  }
+
+  response.status(500).json({ error: 'Internal Server Error' })
+}
+app.use(errorHandler)
+
 const PORT = 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
