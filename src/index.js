@@ -1,69 +1,71 @@
 const express = require('express')
-var morgan = require('morgan')
+const morgan = require('morgan')
 const cors = require('cors')
 const mongoose = require('mongoose')
+const Phonebook = require('./models/phonebook')
 const app = express()
+
 app.use(cors())
 app.use(express.static('dist'))
-
-let data = [
-    { 
-      "id": 1, 
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
-
-// Custom token to log request body
-morgan.token('body', (req) => JSON.stringify(req.body))
-
-// Custom Morgan format to match your desired output
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
-
 app.use(express.json())
 
+// Custom Morgan token to log request body
+morgan.token('body', (req) => JSON.stringify(req.body))
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
+
+// Get all persons
 app.get('/api/persons', (request, response) => {
-  return response.json(data)
+  Phonebook.find({})
+    .then(phonebook => response.json(phonebook))
+    .catch(error => {
+      console.error(`Error fetching phonebook: ${error.message}`)
+      response.status(500).json({ error: 'Internal server error' })
+    })
 })
 
+// Info page
 app.get('/info', (request, response) => {
-  return response.send(`<div><br/><p>Phonebook has info for ${data.length} people</p><p>${new Date().toString()}</p></div>`)
+  Phonebook.countDocuments()
+    .then(count => {
+      response.send(`<div><p>Phonebook has info for ${count} people</p><p>${new Date()}</p></div>`)
+    })
+    .catch(error => {
+      console.error(`Error fetching count: ${error.message}`)
+      response.status(500).json({ error: 'Internal server error' })
+    })
 })
 
+// Get person by ID
 app.get('/api/persons/:id', (request, response) => {
-  const id = parseInt(request.params.id)
-  const person = data.find(person => person.id === id)
-  if (!person) {
-    return response.status(404).send('Person not found')
-  }
-  return response.json(person)
+  Phonebook.findById(request.params.id)
+    .then(person => {
+      if (!person) {
+        return response.status(404).json({ error: 'Person not found' })
+      }
+      response.json(person)
+    })
+    .catch(error => {
+      console.error(`Error fetching person: ${error.message}`)
+      response.status(400).json({ error: 'Invalid ID format' })
+    })
 })
 
+// Delete person
 app.delete('/api/persons/:id', (request, response) => {
-  const id = parseInt(request.params.id)
-  const index = data.findIndex(person => person.id === id)
-  if (index === -1) {
-    return response.status(404).send('Person not found')
-  }
-  data.splice(index, 1)
-  return response.status(200).send(`Person with id ${id} deleted`)
+  Phonebook.findByIdAndDelete(request.params.id)
+    .then(result => {
+      if (!result) {
+        return response.status(404).json({ error: 'Person not found' })
+      }
+      response.status(200).json({ message: `Person with id ${request.params.id} deleted` })
+    })
+    .catch(error => {
+      console.error(`Error deleting person: ${error.message}`)
+      response.status(400).json({ error: 'Invalid ID format' })
+    })
 })
 
+// Add new person
 app.post('/api/persons', (request, response) => {
   const { name, number } = request.body
 
@@ -71,15 +73,22 @@ app.post('/api/persons', (request, response) => {
     return response.status(400).json({ error: 'Name and number are required' })
   }
 
-  const personExists = data.some(person => person.name === name)
-  if (personExists) {
-    return response.status(409).json({ error: 'Name must be unique' })
-  }
+  Phonebook.findOne({ name })
+    .then(existingPerson => {
+      if (existingPerson) {
+        return response.status(409).json({ error: 'Name must be unique' })
+      }
 
-  const id = Math.floor(Math.random() * 1000000) + 1
-  const newPerson = { "id": id, "name": name, "number": number }
-  data.push(newPerson)
-  return response.status(201).json(newPerson)
+      const newPerson = new Phonebook({ name, number })
+      return newPerson.save()
+    })
+    .then(savedPerson => {
+      response.status(201).json(savedPerson)
+    })
+    .catch(error => {
+      console.error(`Error saving person: ${error.message}`)
+      response.status(500).json({ error: 'Internal server error' })
+    })
 })
 
 const PORT = 3001
