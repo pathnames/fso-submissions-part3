@@ -1,7 +1,6 @@
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
-const mongoose = require('mongoose')
 const Phonebook = require('./models/phonebook')
 const app = express()
 
@@ -88,6 +87,7 @@ app.put('/api/persons/:id', (req, res, next) => {
 })
 
 // Error handling middleware
+// eslint-disable-next-line no-unused-vars
 const errorHandler = (error, req, res, next) => {
   console.error(error.message)
 
