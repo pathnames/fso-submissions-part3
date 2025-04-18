@@ -65,7 +65,7 @@ app.post('/api/persons', (req, res, next) => {
     .catch(error => next(error))
 })
 
-// Update existing person
+// Update existing person if the user wants to change their number.
 app.put('/api/persons/:id', (req, res, next) => {
   const { number } = req.body
 
