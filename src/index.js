@@ -86,7 +86,7 @@ app.put('/api/persons/:id', (req, res, next) => {
     .catch(error => next(error))
 })
 
-// Error handling middleware
+// Error handling middleware (next needs to be here)
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (error, req, res, next) => {
   console.error(error.message)
