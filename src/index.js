@@ -65,6 +65,28 @@ app.post('/api/persons', (req, res, next) => {
     .catch(error => next(error))
 })
 
+// Update existing person
+app.put('/api/persons/:id', (req, res, next) => {
+  const { number } = req.body
+
+  if (!number) {
+    return res.status(400).json({ error: 'Number is required' })
+  }
+
+  Phonebook.findByIdAndUpdate(
+    req.params.id,
+    { number },
+    { new: true, runValidators: true, context: 'query' }
+  )
+    .then(updatedPerson => {
+      if (!updatedPerson) {
+        return res.status(404).json({ error: 'Person not found' })
+      }
+      res.json(updatedPerson)
+    })
+    .catch(error => next(error))
+})
+
 // Error handling middleware
 const errorHandler = (error, req, res, next) => {
   console.error(error.message)
